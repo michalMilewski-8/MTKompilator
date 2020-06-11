@@ -1,0 +1,7 @@
+.vs/*
+bin/*
+obj/*
+MT_testy/*
+Properties/*
+*.html
+*.config
