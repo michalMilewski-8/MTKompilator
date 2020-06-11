@@ -427,6 +427,27 @@ public class Compiler
             tmp.GenCode();
             return null;
         }
+        public override Parser.Types CheckType()
+        {
+            Parser.Types left_type = left.CheckType();
+            Parser.Types right_type = right.CheckType();
+
+            if (left_type == Parser.Types.NoneType || left_type == Parser.Types.StringType ||
+                right_type == Parser.Types.NoneType || right_type == Parser.Types.StringType)
+            {
+                errors++;
+                Console.WriteLine($"line {linenumber} error: type error");
+                return Parser.Types.NoneType;
+            }
+            else if (left_type != right_type && (left_type == Parser.Types.BooleanType || right_type == Parser.Types.BooleanType))
+            {
+                return Parser.Types.NoneType;
+            }
+            else
+            {
+                return Parser.Types.BooleanType;
+            }
+        }
     }
     public class EqualNode : RelationsNode
     {

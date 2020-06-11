@@ -4,7 +4,7 @@
 
 // GPPG version 1.5.2
 // Machine:  DESKTOP-8DA6HAV
-// DateTime: 10.06.2020 15:38:36
+// DateTime: 11.06.2020 23:49:01
 // UserName: miles
 // Input file <..\..\kompilator.y - 10.06.2020 12:26:08>
 
