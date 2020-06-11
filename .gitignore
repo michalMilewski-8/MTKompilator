@@ -5,3 +5,4 @@ MT_testy/*
 Properties/*
 *.html
 *.config
+/MT_testy
