@@ -29,6 +29,11 @@ start     : Program OpenBlock body CloseBlock Eof
                     Console.WriteLine("line {0} error: Syntax error",0);
                     YYABORT;
                     }
+          |OpenBlock body CloseBlock Eof {
+                    ++Compiler.errors;
+                    Console.WriteLine("line {0} error: Syntax error",0);
+                    YYABORT;
+                    }
           | Eof {
                     ++Compiler.errors;
                     Console.WriteLine("line {0} error: Syntax error",0);
