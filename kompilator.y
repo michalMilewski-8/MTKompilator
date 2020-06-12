@@ -118,8 +118,8 @@ code      : block code {
           ;
 
 block     : OpenBlock code CloseBlock { $$ = new Compiler.BlockNode($2); $$.linenumber = Compiler.lineno;}
-          | OpenBlock declarations code CloseBlock { ((Compiler.CodeNode)$3).idents = $2; $$ = new Compiler.BlockNode($3); $$.linenumber = Compiler.lineno;}
-          | OpenBlock declarations CloseBlock { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;}
+          | OpenBlock declarations code { ((Compiler.CodeNode)$3).idents = $2; $$ = new Compiler.BlockNode($3); $$.linenumber = Compiler.lineno;} CloseBlock 
+          | OpenBlock declarations { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;} CloseBlock 
           | line { $$ = new Compiler.BlockNode($1);$$.linenumber = Compiler.lineno; }
           | OpenBlock CloseBlock { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;}
           ;

@@ -76,6 +76,7 @@ public class Compiler
         public Node refForWhile = null;
 
         public virtual void SetRefForWhile(Node whileRef) { }
+        public virtual void GenIdents() { }
         public abstract string GenCode();
         public abstract Parser.Types CheckType();
     }
