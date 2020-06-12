@@ -964,7 +964,8 @@ public class Compiler
                     }
                 case Parser.Types.DoubleType:
                     {
-                        EmitCode("call float64[mscorlib]System.Double::Parse(string, valuetype[mscorlib]System.Globalization.NumberStyles, class [mscorlib] System.IFormatProvider)");
+                        EmitCode("call class [mscorlib]System.Globalization.CultureInfo [mscorlib]System.Globalization.CultureInfo::get_InvariantCulture()");
+                        EmitCode("call       float64 [mscorlib]System.Double::Parse(string, class [mscorlib] System.IFormatProvider)");
                         break;
                     }
                 case Parser.Types.BooleanType:
@@ -1163,7 +1164,7 @@ public class Compiler
 
         public override string GenCode()
         {
-            EmitCode("ret");
+            EmitCode("leave EndMain");
             return null;
         }
     }
