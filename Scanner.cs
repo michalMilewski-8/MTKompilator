@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  DESKTOP-8DA6HAV
-//  DateTime: 12.06.2020 15:21:04
+//  DateTime: 12.06.2020 16:59:15
 //  UserName: miles
-//  GPLEX input file <..\..\kompilator.lex - 12.06.2020 12:22:29>
+//  GPLEX input file <..\..\kompilator.lex - 12.06.2020 15:22:02>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: parser, minimize
@@ -165,7 +165,7 @@ namespace GardensPoint
 
     static int[] startState = new int[] {95, 0};
 
-    static Table[] NxS = new Table[99] {
+    static Table[] NxS = new Table[100] {
 /* NxS[   0] */ new Table(0, 0, 0, null),
 /* NxS[   1] */ new Table(0, 0, -1, null),
 /* NxS[   2] */ new Table(0, 0, -1, null),
@@ -179,7 +179,7 @@ namespace GardensPoint
 /* NxS[  10] */ new Table(0, 0, -1, null),
 /* NxS[  11] */ new Table(0, 0, -1, null),
 /* NxS[  12] */ new Table(0, 0, -1, null),
-/* NxS[  13] */ new Table(47, 1, -1, new sbyte[] {91}),
+/* NxS[  13] */ new Table(47, 1, -1, new sbyte[] {98}),
 /* NxS[  14] */ new Table(46, 1, -1, new sbyte[] {97}),
 /* NxS[  15] */ new Table(46, 12, -1, new sbyte[] {97, -1, 15, 15, 15, 15, 
           15, 15, 15, 15, 15, 15}),
@@ -569,7 +569,7 @@ namespace GardensPoint
 /* NxS[  89] */ new Table(0, 0, -1, null),
 /* NxS[  90] */ new Table(48, 10, -1, new sbyte[] {90, 90, 90, 90, 90, 90, 
           90, 90, 90, 90}),
-/* NxS[  91] */ new Table(10, 1, 91, new sbyte[] {-1}),
+/* NxS[  91] */ new Table(0, 0, -1, null),
 /* NxS[  92] */ new Table(0, 0, -1, null),
 /* NxS[  93] */ new Table(0, 0, -1, null),
 /* NxS[  94] */ new Table(0, 0, -1, null),
@@ -585,10 +585,11 @@ namespace GardensPoint
           96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 
           96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 
           96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 
-          96, 96, 96, 96, 98}),
+          96, 96, 96, 96, 99}),
 /* NxS[  97] */ new Table(48, 10, -1, new sbyte[] {90, 90, 90, 90, 90, 90, 
           90, 90, 90, 90}),
-/* NxS[  98] */ new Table(10, 1, 96, new sbyte[] {-1}),
+/* NxS[  98] */ new Table(10, 1, 98, new sbyte[] {91}),
+/* NxS[  99] */ new Table(10, 1, 96, new sbyte[] {-1}),
     };
 
 int NextState() {

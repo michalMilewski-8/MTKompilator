@@ -75,13 +75,24 @@ declaration  : dectype
                     {
                      Console.WriteLine("line: {0} error: such id already exists",Compiler.lineno);
                      ++Compiler.errors;
+                     $$ = new Dictionary<string,Parser.Types>();
                     }
                     else
                        $4.Add($3, Compiler.currentDecType);
                     $$ = $4;
                 }
-             | error Ident end { Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);  ++Compiler.errors; }
-             | dectype error end { Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);  ++Compiler.errors; }
+             | error Ident end 
+                { 
+                    Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);
+                    ++Compiler.errors;
+                    $$ = new Dictionary<string,Parser.Types>();
+                }
+             | dectype error end 
+                {
+                    Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);
+                    ++Compiler.errors; 
+                    $$ = new Dictionary<string,Parser.Types>();
+                }
             ;
 
 longdeclaration     : Coma Ident longdeclaration
@@ -173,6 +184,10 @@ line      : expr end { $$ = new Compiler.BareExpresionNode($1);$$.linenumber = C
             Console.WriteLine("line {0,3} error: syntax error ",Compiler.lineno);  ++Compiler.errors; ;
           }
           | error Eof {
+            Console.WriteLine("line {0,3} error: unexpected Eof ",Compiler.lineno);  ++Compiler.errors; 
+            YYABORT; 
+          }
+          | Eof {
             Console.WriteLine("line {0,3} error: unexpected Eof ",Compiler.lineno);  ++Compiler.errors; 
             YYABORT; 
           }
