@@ -1062,14 +1062,14 @@ public class Compiler
                         return null;
                     }
             }
-            EmitCode($"stloc '{ident.identifier}'");
+            EmitCode($"stloc '{ident.usable_Id}'");
             return null;
         }
     }
     public class IdentNode : Node
     {
         public string identifier;
-        private string usable_Id;
+        public string usable_Id;
         public IdentNode() { }
         public IdentNode(string _identifier)
         {
@@ -1217,7 +1217,7 @@ public class Compiler
                 if (id_type == Parser.Types.DoubleType && ex_type != id_type)
                     EmitCode("conv.r8");
                 EmitCode("dup");
-                EmitCode($"stloc '{ident.identifier}'");
+                EmitCode($"stloc '{ident.usable_Id}'");
             }
             return null;
         }
