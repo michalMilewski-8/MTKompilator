@@ -118,8 +118,13 @@ code      : block code {
           ;
 
 block     : OpenBlock code CloseBlock { $$ = new Compiler.BlockNode($2); $$.linenumber = Compiler.lineno;}
-          | OpenBlock declarations code { ((Compiler.CodeNode)$3).idents = $2; $$ = new Compiler.BlockNode($3); $$.linenumber = Compiler.lineno;} CloseBlock 
-          | OpenBlock declarations { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;} CloseBlock 
+          | OpenBlock declarations code CloseBlock
+          {
+            ((Compiler.CodeNode)$3).idents = $2;
+            $$ = new Compiler.BlockNode($3);
+            $$.linenumber = Compiler.lineno;
+          } 
+          | OpenBlock declarations CloseBlock { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;}
           | line { $$ = new Compiler.BlockNode($1);$$.linenumber = Compiler.lineno; }
           | OpenBlock CloseBlock { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;}
           ;
@@ -325,11 +330,11 @@ end       : EndLine
 %%
 
 public enum Types{
-    NoneType = -1,
-    IntegerType = 0,
-    DoubleType =1,
-    BooleanType = 2,
-    StringType = 3
+    NoneType = 0,
+    IntegerType = 1,
+    DoubleType = 2,
+    BooleanType = 3,
+    StringType = 4
 }
 
 public Parser(Scanner scanner) : base(scanner) { }

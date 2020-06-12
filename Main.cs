@@ -47,6 +47,8 @@ public class Compiler
         if (errors == 0)
         {
             GenProlog();
+            treeRoot?.GenIdents();
+            treeRoot?.SetRefParentCodeNode(null);
             treeRoot?.GenCode();
             GenEpilog();
         }
@@ -68,14 +70,17 @@ public class Compiler
     public static Parser.Types currentDecType;
 
     private static int blockIdCounter = 0;
+    private static int codeIdCounter = 0;
     private static int shortLogicCounter = 0;
     public static int lineno = 1;
     public abstract class Node
     {
         public int linenumber;
         public Node refForWhile = null;
+        public Node refParentCodeNode = null;
 
-        public virtual void SetRefForWhile(Node whileRef) { }
+        public virtual void SetRefForWhile(Node whileRef) { refForWhile = whileRef; }
+        public virtual void SetRefParentCodeNode(Node parentCodeNode) { refParentCodeNode = parentCodeNode; }
         public virtual void GenIdents() { }
         public abstract string GenCode();
         public abstract Parser.Types CheckType();
@@ -102,7 +107,14 @@ public class Compiler
         {
             return expr.CheckType();
         }
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                expr.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             expr.GenCode();
@@ -170,7 +182,14 @@ public class Compiler
         {
             right = r;
         }
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                right.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             throw new NotImplementedException();
@@ -273,7 +292,15 @@ public class Compiler
             left = _left;
             right = _right;
         }
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                left.SetRefParentCodeNode(parentCodeNode);
+                right.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             if (this.CheckType() == Parser.Types.NoneType)
@@ -328,6 +355,15 @@ public class Compiler
             right = _right;
         }
         public RelationsNode() { }
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                left.SetRefParentCodeNode(parentCodeNode);
+                right.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             var type = this.CheckType();
@@ -492,7 +528,15 @@ public class Compiler
         {
             return null;
         }
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                left.SetRefParentCodeNode(parentCodeNode);
+                right.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override Parser.Types CheckType()
         {
             Parser.Types left_type = left.CheckType();
@@ -582,6 +626,15 @@ public class Compiler
             return null;
 
         }
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                left.SetRefParentCodeNode(parentCodeNode);
+                right.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override Parser.Types CheckType()
         {
             Parser.Types left_type = left.CheckType();
@@ -637,6 +690,15 @@ public class Compiler
             right = _right;
         }
         public AdditiveNode() { }
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                left.SetRefParentCodeNode(parentCodeNode);
+                right.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             var type = this.CheckType();
@@ -715,7 +777,15 @@ public class Compiler
         {
             return Parser.Types.NoneType;
         }
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                condition.SetRefParentCodeNode(parentCodeNode);
+                block.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             BlockNode bl1 = block as BlockNode;
@@ -764,7 +834,16 @@ public class Compiler
         {
             return Parser.Types.NoneType;
         }
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                condition.SetRefParentCodeNode(parentCodeNode);
+                blockAfterElse.SetRefParentCodeNode(parentCodeNode);
+                blockAfterIf.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             BlockNode bl1 = blockAfterIf as BlockNode;
@@ -824,7 +903,15 @@ public class Compiler
             }
         }
 
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                condition.SetRefParentCodeNode(parentCodeNode);
+                block.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override Parser.Types CheckType()
         {
             return Parser.Types.NoneType;
@@ -869,7 +956,14 @@ public class Compiler
         {
             return writable_exp.CheckType();
         }
-
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                writable_exp.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             switch (writable_exp.CheckType())
@@ -916,6 +1010,15 @@ public class Compiler
         public override Parser.Types CheckType()
         {
             return ident.CheckType();
+        }
+
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                ident.SetRefParentCodeNode(parentCodeNode);
+            }
         }
 
         public override string GenCode()
@@ -966,7 +1069,7 @@ public class Compiler
     public class IdentNode : Node
     {
         public string identifier;
-
+        private string usable_Id;
         public IdentNode() { }
         public IdentNode(string _identifier)
         {
@@ -975,9 +1078,17 @@ public class Compiler
 
         public override Parser.Types CheckType()
         {
-            Parser.Types type;
-            if (Compiler.Identifiers.TryGetValue(identifier, out type))
+            Parser.Types type = Parser.Types.NoneType;
+            CodeNode node = refParentCodeNode as CodeNode;
+            while(!(node is null) && !(node.idents.TryGetValue(identifier, out type)))
+            {
+                node = node.refParentCodeNode as CodeNode;
+            }
+            if (type != Parser.Types.NoneType)
+            {
+                usable_Id = $"{node.codeId}_{identifier}";
                 return type;
+            }
             else
             {
                 Console.WriteLine($"line {linenumber} error: undefined identifier");
@@ -989,7 +1100,7 @@ public class Compiler
         public override string GenCode()
         {
             this.CheckType();
-            EmitCode($"ldloc '{identifier}'");
+            EmitCode($"ldloc '{usable_Id}'");
             return null;
         }
     }
@@ -1110,6 +1221,16 @@ public class Compiler
             }
             return null;
         }
+
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                ident.SetRefParentCodeNode(parentCodeNode);
+                expr.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
     }
     public class StringNode : Node
     {
@@ -1175,14 +1296,33 @@ public class Compiler
                 inside.SetRefForWhile(whileRef);
             }
         }
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                inside.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
+        public override void GenIdents()
+        {
+            inside.GenIdents();
+        }
     }
     public class CodeNode : Node
     {
         public List<Node> inside;
         public Dictionary<string, Parser.Types> idents;
         public string codeId;
-        public CodeNode() { inside = new List<Node>(); }
-        public CodeNode(List<Node> _inside) { inside = _inside; }
+        public CodeNode() { 
+            inside = new List<Node>();
+            codeId = $"cn_{codeIdCounter++}";
+            idents = new Dictionary<string, Parser.Types>(); }
+        public CodeNode(List<Node> _inside) { 
+            inside = _inside;
+            codeId = $"cn_{codeIdCounter++}";
+            idents = new Dictionary<string, Parser.Types>();
+        }
 
         public override Parser.Types CheckType()
         {
@@ -1196,6 +1336,69 @@ public class Compiler
                 instr.GenCode();
             }
             return null;
+        }
+
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            if (refParentCodeNode is null)
+            {
+                refParentCodeNode = parentCodeNode;
+                foreach (var instr in inside)
+                {
+                    instr.SetRefParentCodeNode(this);
+                }
+            }
+        }
+
+        public override void GenIdents()
+        {
+            foreach (var variable in idents)
+            {
+                switch (variable.Value)
+                {
+                    case Parser.Types.BooleanType:
+                        EmitCode($".locals init ( bool '{codeId}_{variable.Key}' )");
+                        break;
+                    case Parser.Types.DoubleType:
+                        EmitCode($".locals init ( float64 '{codeId}_{variable.Key}' )");
+                        break;
+                    case Parser.Types.IntegerType:
+                        EmitCode($".locals init ( int32 '{codeId}_{variable.Key}' )");
+                        break;
+                    default:
+                        errors++;
+                        Console.WriteLine($"error: bad type");
+                        break;
+                }
+            }
+            foreach (var node in inside)
+            {
+                node.GenIdents();
+            }
+            EmitCode();
+            if (codeId == "super")
+            {
+                foreach (var variable in idents)
+                {
+                    switch (variable.Value)
+                    {
+                        case Parser.Types.BooleanType:
+                            EmitCode($"ldc.i4.0");
+                            break;
+                        case Parser.Types.DoubleType:
+                            EmitCode($"ldc.r8 0.0");
+                            break;
+                        case Parser.Types.IntegerType:
+                            EmitCode($"ldc.i4.0");
+                            break;
+                        default:
+                            errors++;
+                            Console.WriteLine($"error: bad type");
+                            break;
+                    }
+                    EmitCode($"stloc  '{codeId}_{variable.Key}'");
+                }
+            }
         }
 
         public override void SetRefForWhile(Node whileRef)
@@ -1212,7 +1415,7 @@ public class Compiler
     }
     public class ContinueNode : Node
     {
-        public ContinueNode() {}
+        public ContinueNode() { }
 
         public override Parser.Types CheckType()
         {
@@ -1222,7 +1425,7 @@ public class Compiler
         public override string GenCode()
         {
             WhileNode node = refForWhile as WhileNode;
-            if(node is null)
+            if (node is null)
             {
                 Console.WriteLine($"line {linenumber} error: continue not inside any while");
                 errors++;
@@ -1253,12 +1456,12 @@ public class Compiler
                 Console.WriteLine($"line {linenumber} error: syntax error");
                 errors++;
             }
-            if(node.value < 1)
+            if (node.value < 1)
             {
                 Console.WriteLine($"line {linenumber} error: syntax error");
                 errors++;
             }
-            numOfJumps = node.value; 
+            numOfJumps = node.value;
         }
 
         public override Parser.Types CheckType()
@@ -1329,48 +1532,7 @@ public class Compiler
         EmitCode(".try");
         EmitCode("{");
         EmitCode();
-
         EmitCode("// prolog");
-        foreach (var variable in Identifiers)
-        {
-            switch (variable.Value)
-            {
-                case Parser.Types.BooleanType:
-                    EmitCode($".locals init ( bool '{variable.Key}' )");
-                    break;
-                case Parser.Types.DoubleType:
-                    EmitCode($".locals init ( float64 '{variable.Key}' )");
-                    break;
-                case Parser.Types.IntegerType:
-                    EmitCode($".locals init ( int32 '{variable.Key}' )");
-                    break;
-                default:
-                    errors++;
-                    Console.WriteLine($"error: bad type");
-                    break;
-            }
-        }
-        EmitCode();
-        foreach (var variable in Identifiers)
-        {
-            switch (variable.Value)
-            {
-                case Parser.Types.BooleanType:
-                    EmitCode($"ldc.i4.0");
-                    break;
-                case Parser.Types.DoubleType:
-                    EmitCode($"ldc.r8 0.0");
-                    break;
-                case Parser.Types.IntegerType:
-                    EmitCode($"ldc.i4.0");
-                    break;
-                default:
-                    errors++;
-                    Console.WriteLine($"error: bad type");
-                    break;
-            }
-            EmitCode($"stloc  '{variable.Key}'");
-        }
         EmitCode();
     }
 
