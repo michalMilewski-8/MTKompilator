@@ -1178,6 +1178,8 @@ public class Compiler
     public class CodeNode : Node
     {
         public List<Node> inside;
+        public Dictionary<string, Parser.Types> idents;
+        public string codeId;
         public CodeNode() { inside = new List<Node>(); }
         public CodeNode(List<Node> _inside) { inside = _inside; }
 

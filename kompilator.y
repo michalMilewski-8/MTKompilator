@@ -8,6 +8,7 @@
 public string  val;
 public Parser.Types type;
 public Compiler.Node node;
+public Dictionary<string,Parser.Types> idents;
 }
 
 //
@@ -19,6 +20,7 @@ public Compiler.Node node;
 
 %type <type> dectype 
 %type <node> line  expr expr2 expr3 expr4 expr5 expr6 expr1 val block code unary bit mult add rel logic
+%type <idents> declarations declaration longdeclaration
 
 
 %%
@@ -31,14 +33,26 @@ start     : Program OpenBlock body CloseBlock Eof
                     }
           ;
 
-body      : declarations code { Compiler.treeRoot = $2; }
-          | declarations
-          | code { Compiler.treeRoot = $1; }
+body      : declarations code { Compiler.treeRoot = $2; ((Compiler.CodeNode)$2).idents = $1; ((Compiler.CodeNode)$2).codeId = "super"; }
+          | declarations { Compiler.treeRoot = new Compiler.CodeNode(); ((Compiler.CodeNode)Compiler.treeRoot).idents = $1;}
+          | code { Compiler.treeRoot = $1; ((Compiler.CodeNode)$1).codeId = "super"; }
           | 
           ;
 
-declarations : declaration declarations 
-             | declaration
+declarations : declaration declarations {
+                    $$ = $1;
+                    foreach(var pair in $2)
+                    {
+                        if ($$.ContainsKey(pair.Key))
+                        {
+                             Console.WriteLine("line: {0} error: such id already exists",Compiler.lineno);
+                             ++Compiler.errors;
+                        }
+                        else
+                            $$.Add(pair.Key, pair.Value);
+                    }
+                }
+             | declaration {$$ = $1;}
              ;
 
 declaration  : dectype
@@ -47,11 +61,14 @@ declaration  : dectype
                 }
                Ident longdeclaration end 
                 { 
-                    if(!Compiler.AddNewIdentifier($3,$1))
+                    if ($4.ContainsKey($3))
                     {
-                        Console.WriteLine("line: {0} error: such id already exists",Compiler.lineno);
-                        ++Compiler.errors;
+                     Console.WriteLine("line: {0} error: such id already exists",Compiler.lineno);
+                     ++Compiler.errors;
                     }
+                    else
+                       $4.Add($3, Compiler.currentDecType);
+                    $$ = $4;
                 }
              | error Ident end { Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);  ++Compiler.errors; }
              | dectype error end { Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);  ++Compiler.errors; }
@@ -59,13 +76,17 @@ declaration  : dectype
 
 longdeclaration     : Coma Ident longdeclaration
                         { 
-                            if(!Compiler.AddNewIdentifier($2,Compiler.currentDecType))
+                            if ($3.ContainsKey($2))
                             {
                              Console.WriteLine("line: {0} error: such id already exists",Compiler.lineno);
                              ++Compiler.errors;
                             }
+                            else
+                               $3.Add($2, Compiler.currentDecType);
+
+                            $$ = $3;
                         }
-                    |
+                    | {$$ = new Dictionary<string,Parser.Types>();}
                     ;
              
 
@@ -97,6 +118,8 @@ code      : block code {
           ;
 
 block     : OpenBlock code CloseBlock { $$ = new Compiler.BlockNode($2); $$.linenumber = Compiler.lineno;}
+          | OpenBlock declarations code CloseBlock { ((Compiler.CodeNode)$3).idents = $2; $$ = new Compiler.BlockNode($3); $$.linenumber = Compiler.lineno;}
+          | OpenBlock declarations CloseBlock { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;}
           | line { $$ = new Compiler.BlockNode($1);$$.linenumber = Compiler.lineno; }
           | OpenBlock CloseBlock { $$ = new Compiler.BlockNode(new Compiler.EmptyNode()); $$.linenumber = Compiler.lineno;}
           ;
