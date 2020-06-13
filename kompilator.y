@@ -188,9 +188,10 @@ line      : expr end { $$ = new Compiler.BareExpresionNode($1);$$.linenumber = C
             YYABORT; 
           }
           | Eof {
-            Console.WriteLine("line {0,3} error: unexpected Eof ",Compiler.lineno);  ++Compiler.errors; 
-            YYABORT; 
-          }
+                    ++Compiler.errors;
+                    Console.WriteLine("line {0,3} error: Syntax error",0);
+                    YYABORT;
+                    }
           ;
 
 

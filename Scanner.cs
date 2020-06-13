@@ -6,7 +6,7 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  DESKTOP-8DA6HAV
-//  DateTime: 12.06.2020 16:59:15
+//  DateTime: 12.06.2020 17:49:28
 //  UserName: miles
 //  GPLEX input file <..\..\kompilator.lex - 12.06.2020 15:22:02>
 //  GPLEX frame file <embedded resource>

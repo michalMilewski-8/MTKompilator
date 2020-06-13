@@ -1285,7 +1285,7 @@ public class Compiler
 
         public override string GenCode()
         {
-            EmitCode("ret");
+            EmitCode("leave EndMain");
             return null;
         }
     }

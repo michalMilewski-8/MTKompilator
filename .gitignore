@@ -6,3 +6,5 @@ Properties/*
 *.html
 *.config
 /MT_testy
+Parser.cs
+Scanner.cs
