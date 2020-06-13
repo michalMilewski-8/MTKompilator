@@ -64,10 +64,21 @@ public class Compiler
         return errors == 0 ? 0 : 2;
     }
 
-    public static Dictionary<String, Parser.Types> Identifiers = new Dictionary<String, Parser.Types>();
-
     public static Node treeRoot = null;
-    public static Parser.Types currentDecType;
+    public static DecType currentDecType;
+
+    public struct DecType
+    {
+        public DecType(Parser.Types t = Parser.Types.NoneType, bool table = false, int index = 1)
+        {
+            type = t;
+            isTable = table;
+            tableIndexesNum = index;
+        }
+        public Parser.Types type;
+        public bool isTable;
+        public int tableIndexesNum;
+    }
 
     private static int blockIdCounter = 0;
     private static int codeIdCounter = 0;
@@ -836,6 +847,10 @@ public class Compiler
                 block.SetRefForWhile(whileRef);
             }
         }
+        public override void GenIdents()
+        {
+            block.GenIdents();
+        }
     }
     public class IfElseNode : Node
     {
@@ -897,6 +912,11 @@ public class Compiler
                 blockAfterIf.SetRefForWhile(whileRef);
                 blockAfterElse.SetRefForWhile(whileRef);
             }
+        }
+        public override void GenIdents()
+        {
+            blockAfterIf.GenIdents();
+            blockAfterElse.GenIdents();
         }
     }
     public class WhileNode : Node
@@ -961,6 +981,10 @@ public class Compiler
             {
                 refForWhile = whileRef;
             }
+        }
+        public override void GenIdents()
+        {
+            block.GenIdents();
         }
     }
     public class WriteNode : Node
@@ -1057,6 +1081,8 @@ public class Compiler
                 return null;
             }
 
+            ident.GenSetValueBefore();
+
             EmitCode("call  string [mscorlib]System.Console::ReadLine()");
 
             switch (ident.CheckType())
@@ -1084,7 +1110,7 @@ public class Compiler
                         return null;
                     }
             }
-            EmitCode($"stloc '{ident.usable_Id}'");
+            ident.GenSetValue();
             return null;
         }
     }
@@ -1100,16 +1126,22 @@ public class Compiler
 
         public override Parser.Types CheckType()
         {
-            Parser.Types type = Parser.Types.NoneType;
+            DecType type = new DecType();
             CodeNode node = refParentCodeNode as CodeNode;
-            while(!(node is null) && !(node.idents.TryGetValue(identifier, out type)))
+            while (!(node is null) && !(node.idents.TryGetValue(identifier, out type)))
             {
                 node = node.refParentCodeNode as CodeNode;
             }
-            if (type != Parser.Types.NoneType)
+            if (type.type != Parser.Types.NoneType)
             {
+                if (type.isTable)
+                {
+                    Console.WriteLine($"line {linenumber} error: trying to use table like normal variable");
+                    errors++;
+                    return Parser.Types.NoneType;
+                }
                 usable_Id = $"{node.codeId}_{identifier}";
-                return type;
+                return type.type;
             }
             else
             {
@@ -1121,9 +1153,231 @@ public class Compiler
 
         public override string GenCode()
         {
-            this.CheckType();
+            if (this.CheckType() != Parser.Types.NoneType) ;
             EmitCode($"ldloc '{usable_Id}'");
             return null;
+        }
+
+        public virtual void GenSetValueBefore() { }
+        public virtual void GenSetValue()
+        {
+            EmitCode($"stloc '{usable_Id}'");
+        }
+    }
+    public class TabIdentNode : IdentNode
+    {
+        public List<Node> indexes;
+        private bool create;
+        public TabIdentNode(string ident, List<Node> _indexes, bool _create = false) : base(ident)
+        {
+            indexes = _indexes;
+            create = _create;
+        }
+
+        public override Parser.Types CheckType()
+        {
+            DecType type = new DecType();
+            CodeNode node = refParentCodeNode as CodeNode;
+            while (!(node is null) && !(node.idents.TryGetValue(identifier, out type)))
+            {
+                node = node.refParentCodeNode as CodeNode;
+            }
+            if (type.type != Parser.Types.NoneType)
+            {
+                if (!type.isTable)
+                {
+                    Console.WriteLine($"line {linenumber} error: identifier is not a table");
+                    errors++;
+                    return Parser.Types.NoneType;
+                }
+                if (type.tableIndexesNum != indexes.Count)
+                {
+                    Console.WriteLine($"line {linenumber} error: wrong number of dimmensions");
+                    errors++;
+                    return Parser.Types.NoneType;
+                }
+                int dimm = 1;
+                foreach (var expr in indexes)
+                {
+                    if (expr.CheckType() != Parser.Types.IntegerType)
+                    {
+                        Console.WriteLine($"line {linenumber} error: wrong type of {dimm} dimmension index");
+                        errors++;
+                        return Parser.Types.NoneType;
+                    }
+                    ++dimm;
+                }
+                usable_Id = $"{node.codeId}_{identifier}";
+                return type.type;
+            }
+            else
+            {
+                Console.WriteLine($"line {linenumber} error: undefined identifier");
+                errors++;
+                return Parser.Types.NoneType;
+            }
+        }
+
+        public override string GenCode()
+        {
+            var type = this.CheckType();
+            if (type == Parser.Types.NoneType)
+                return null;
+            if (create)
+            {
+                foreach (var index in indexes)
+                {
+                    index.GenCode();
+                }
+                if (indexes.Count > 1)
+                {
+                    string inside = "0...";
+                    string args = "int32";
+                    for (int i = 1; i < indexes.Count; i++)
+                    {
+                        inside += ",0...";
+                        args += ",int32";
+                    }
+                    string stype = null;
+                    switch (type)
+                    {
+                        case Parser.Types.BooleanType:
+                            stype = "bool";
+                            break;
+                        case Parser.Types.DoubleType:
+                            stype = "float64";
+                            break;
+                        case Parser.Types.IntegerType:
+                            stype = "int32";
+                            break;
+                    }
+                    EmitCode($"newobj instance void {stype}[{inside}]::.ctor({args})");
+                }
+                else
+                {
+                    string stype = null;
+                    switch (type)
+                    {
+                        case Parser.Types.BooleanType:
+                            stype = "Boolean";
+                            break;
+                        case Parser.Types.DoubleType:
+                            stype = "Double";
+                            break;
+                        case Parser.Types.IntegerType:
+                            stype = "Int32";
+                            break;
+                    }
+                    EmitCode($"newarr [mscorlib]System.{stype}");
+                }
+                EmitCode($"stloc '{usable_Id}'");
+            }
+            else
+            {
+                EmitCode($"ldloc '{usable_Id}'");
+                if (indexes.Count > 1)
+                {
+                    string inside = "0...";
+                    string args = "int32";
+                    string stype = null;
+                    switch (type)
+                    {
+                        case Parser.Types.BooleanType:
+                            stype = "bool";
+                            break;
+                        case Parser.Types.DoubleType:
+                            stype = "float64";
+                            break;
+                        case Parser.Types.IntegerType:
+                            stype = "int32";
+                            break;
+                    }
+                    for (int i = 1; i < indexes.Count; i++)
+                    {
+                        inside += ",0...";
+                        args += ",int32";
+                    }
+                    foreach (var index in indexes)
+                    {
+                        index.GenCode();
+                    }
+                    EmitCode($"call instance {stype} {stype}[{inside}]::Get({args})");
+                }
+                else
+                {
+                    indexes[0].GenCode();
+                    switch (type)
+                    {
+                        case Parser.Types.BooleanType:
+                            EmitCode($"ldelem.u1");
+                            break;
+                        case Parser.Types.DoubleType:
+                            EmitCode($"ldelem.r8");
+                            break;
+                        case Parser.Types.IntegerType:
+                            EmitCode($"ldelem.i4");
+                            break;
+                    }
+                }
+
+            }
+            return null;
+        }
+        public override void GenSetValueBefore()
+        {
+            var type = this.CheckType();
+            if (type == Parser.Types.NoneType)
+                return;
+            EmitCode($"ldloc '{usable_Id}'");
+            foreach (var index in indexes)
+            {
+                index.GenCode();
+            }
+        }
+        public override void GenSetValue()
+        {
+            var type = this.CheckType();
+            if (type == Parser.Types.NoneType)
+                return;
+            if (indexes.Count > 1)
+            {
+                string inside = "0...";
+                string args = "int32";
+                for (int i = 1; i < indexes.Count; i++)
+                {
+                    inside += ",0...";
+                    args += ",int32";
+                }
+                string stype = null;
+                switch (type)
+                {
+                    case Parser.Types.BooleanType:
+                        stype = "bool";
+                        break;
+                    case Parser.Types.DoubleType:
+                        stype = "float64";
+                        break;
+                    case Parser.Types.IntegerType:
+                        stype = "int32";
+                        break;
+                }
+                EmitCode($"call instance void {stype}[{inside}]::Set({args},{stype})");
+            }
+            else
+            {
+                switch (type)
+                {
+                    case Parser.Types.BooleanType:
+                        EmitCode("stelem.i1");
+                        break;
+                    case Parser.Types.DoubleType:
+                        EmitCode("stelem.r8");
+                        break;
+                    case Parser.Types.IntegerType:
+                        EmitCode("stelem.i4");
+                        break;
+                }
+            }
         }
     }
     public class IntNumberNode : Node
@@ -1234,12 +1488,39 @@ public class Compiler
             }
             else
             {
-
+                ident.GenSetValueBefore();
                 expr.GenCode();
                 if (id_type == Parser.Types.DoubleType && ex_type != id_type)
                     EmitCode("conv.r8");
-                EmitCode("dup");
-                EmitCode($"stloc '{ident.usable_Id}'");
+                switch(id_type)
+                {
+                    case Parser.Types.BooleanType:
+                        EmitCode("stloc 'tempb'");
+                        EmitCode("ldloc 'tempb'");
+                        break;
+                    case Parser.Types.DoubleType:
+                        EmitCode("stloc 'tempf'");
+                        EmitCode("ldloc 'tempf'");
+                        break;
+                    case Parser.Types.IntegerType:
+                        EmitCode("stloc 'tempi'");
+                        EmitCode("ldloc 'tempi'");
+                        break;
+                }
+                ident.GenSetValue();
+                switch (id_type)
+                {
+                    case Parser.Types.BooleanType:
+                        EmitCode("ldloc 'tempb'");
+                        break;
+                    case Parser.Types.DoubleType:
+                        EmitCode("ldloc 'tempf'");
+                        break;
+                    case Parser.Types.IntegerType:
+                        EmitCode("ldloc 'tempi'");
+                        break;
+                }
+
             }
             return null;
         }
@@ -1334,16 +1615,19 @@ public class Compiler
     public class CodeNode : Node
     {
         public List<Node> inside;
-        public Dictionary<string, Parser.Types> idents;
+        public Dictionary<string, DecType> idents;
         public string codeId;
-        public CodeNode() { 
+        public CodeNode()
+        {
             inside = new List<Node>();
             codeId = $"cn_{codeIdCounter++}";
-            idents = new Dictionary<string, Parser.Types>(); }
-        public CodeNode(List<Node> _inside) { 
+            idents = new Dictionary<string, DecType>();
+        }
+        public CodeNode(List<Node> _inside)
+        {
             inside = _inside;
             codeId = $"cn_{codeIdCounter++}";
-            idents = new Dictionary<string, Parser.Types>();
+            idents = new Dictionary<string, DecType>();
         }
 
         public override Parser.Types CheckType()
@@ -1376,22 +1660,42 @@ public class Compiler
         {
             foreach (var variable in idents)
             {
-                switch (variable.Value)
+                string type = null;
+                switch (variable.Value.type)
                 {
                     case Parser.Types.BooleanType:
-                        EmitCode($".locals init ( bool '{codeId}_{variable.Key}' )");
+                        type = "bool";
                         break;
                     case Parser.Types.DoubleType:
-                        EmitCode($".locals init ( float64 '{codeId}_{variable.Key}' )");
+                        type = "float64";
                         break;
                     case Parser.Types.IntegerType:
-                        EmitCode($".locals init ( int32 '{codeId}_{variable.Key}' )");
+                        type = "int32";
                         break;
                     default:
                         errors++;
                         Console.WriteLine($"error: bad type");
                         break;
                 }
+                if (type is null) continue;
+                if (variable.Value.isTable)
+                {
+                    if (variable.Value.tableIndexesNum > 1)
+                    {
+                        string inside = "0...";
+                        for (int i = 1; i < variable.Value.tableIndexesNum; i++)
+                        {
+                            inside += ",0...";
+                        }
+                        EmitCode($".locals init ( {type}[{inside}] '{codeId}_{variable.Key}' )");
+                    }
+                    else
+                    {
+                        EmitCode($".locals init ( {type}[] '{codeId}_{variable.Key}' )");
+                    }
+                }
+                else
+                    EmitCode($".locals init ( {type} '{codeId}_{variable.Key}' )");
             }
             foreach (var node in inside)
             {
@@ -1402,7 +1706,8 @@ public class Compiler
             {
                 foreach (var variable in idents)
                 {
-                    switch (variable.Value)
+                    if (variable.Value.isTable) continue;
+                    switch (variable.Value.type)
                     {
                         case Parser.Types.BooleanType:
                             EmitCode($"ldc.i4.0");
@@ -1523,15 +1828,6 @@ public class Compiler
         }
     }
 
-    public static bool AddNewIdentifier(string id, Parser.Types type)
-    {
-        if (Identifiers.ContainsKey(id))
-            return false;
-        else
-            Identifiers.Add(id, type);
-        return true;
-    }
-
     public static void EmitCode(string instr = null)
     {
         sw.WriteLine(instr);
@@ -1556,6 +1852,9 @@ public class Compiler
         EmitCode();
         EmitCode("// prolog");
         EmitCode();
+        EmitCode($".locals init ( float64 'tempf' )");
+        EmitCode($".locals init ( int32 'tempi' )");
+        EmitCode($".locals init ( bool 'tempb' )");
     }
 
     private static void GenEpilog()

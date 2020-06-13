@@ -6,21 +6,25 @@
 %union
 {
 public string  val;
+public int  integ;
 public Parser.Types type;
 public Compiler.Node node;
-public Dictionary<string,Parser.Types> idents;
+public Dictionary<string,Compiler.DecType> idents;
+public List<Compiler.Node> index;
 }
 
 //
 
 // 
 
-%token Program  Int Double Bool OpenBlock CloseBlock Assign Plus Minus Multiplies Divides OpenPar ClosePar EndLine Eof Error Write If Else While Read  Return LogicOr LogicAnd Or And Equal NotEqual Greater GreaterEqual Smaller SmallerEqual LogicNot Not Coma Break Continue
+%token Program  Int Double Bool OpenBlock CloseBlock Assign Plus Minus Multiplies Divides OpenPar ClosePar EndLine Eof Error Write If Else While Read  Return LogicOr LogicAnd Or And Equal NotEqual Greater GreaterEqual Smaller SmallerEqual LogicNot Not Coma Break Continue OpenIndex CloseIndex Create
 %token <val> Ident IntNumber RealNumber Boolean String
 
 %type <type> dectype 
+%type <index> indexes 
 %type <node> line  expr expr2 expr3 expr4 expr5 expr6 expr1 val block code unary bit mult add rel logic
 %type <idents> declarations declaration longdeclaration
+%type <integ> dimmensions
 
 
 %%
@@ -63,11 +67,12 @@ declarations : declaration declarations {
                     }
                 }
              | declaration {$$ = $1;}
+
              ;
 
 declaration  : dectype
                 {
-                    Compiler.currentDecType = $1;
+                    Compiler.currentDecType = new Compiler.DecType($1);
                 }
                Ident longdeclaration end 
                 { 
@@ -75,24 +80,44 @@ declaration  : dectype
                     {
                      Console.WriteLine("line: {0} error: such id already exists",Compiler.lineno);
                      ++Compiler.errors;
-                     $$ = new Dictionary<string,Parser.Types>();
+                     $$ = new Dictionary<string,Compiler.DecType>();
                     }
                     else
                        $4.Add($3, Compiler.currentDecType);
                     $$ = $4;
                 }
+             | dectype OpenIndex dimmensions CloseIndex
+                {
+                    Compiler.currentDecType = new Compiler.DecType($1,true,$3);
+                }
+               Ident longdeclaration end 
+                { 
+                    if ($7.ContainsKey($6))
+                    {
+                     Console.WriteLine("line: {0} error: such id already exists",Compiler.lineno);
+                     ++Compiler.errors;
+                     $$ = new Dictionary<string,Compiler.DecType>();
+                    }
+                    else
+                       $7.Add($6, Compiler.currentDecType);
+                    $$ = $7;
+                }
              | error Ident end 
                 { 
                     Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);
                     ++Compiler.errors;
-                    $$ = new Dictionary<string,Parser.Types>();
+                    $$ = new Dictionary<string,Compiler.DecType>();
                 }
              | dectype error end 
                 {
                     Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);
                     ++Compiler.errors; 
-                    $$ = new Dictionary<string,Parser.Types>();
+                    $$ = new Dictionary<string,Compiler.DecType>();
                 }
+            ;
+
+dimmensions : Coma dimmensions{ $$ = $2+1;}
+            | {$$ = 1;}
             ;
 
 longdeclaration     : Coma Ident longdeclaration
@@ -107,7 +132,7 @@ longdeclaration     : Coma Ident longdeclaration
 
                             $$ = $3;
                         }
-                    | {$$ = new Dictionary<string,Parser.Types>();}
+                    | {$$ = new Dictionary<string,Compiler.DecType>();}
                     ;
              
 
@@ -154,44 +179,60 @@ line      : expr end { $$ = new Compiler.BareExpresionNode($1);$$.linenumber = C
           | Read Ident end { $$ = new Compiler.ReadNode(new Compiler.IdentNode($2));$$.linenumber = Compiler.lineno; }
           | Write expr end { $$ = new Compiler.WriteNode($2);$$.linenumber = Compiler.lineno; }
           | Write String end { $$ = new Compiler.WriteNode(new Compiler.StringNode($2)); $$.linenumber = Compiler.lineno;}
-          | If OpenPar expr ClosePar block {
-            $$ = new Compiler.IfNode($3,$5);
-            $$.linenumber = Compiler.lineno;
-          }
-          | If OpenPar expr ClosePar block Else block {
-            $$ = new Compiler.IfElseNode($3,$5,$7);
-            $$.linenumber = Compiler.lineno;
-          }
-          | While OpenPar expr ClosePar block {
-            $$ = new Compiler.WhileNode($3,$5, Compiler.lineno);
-          }
-          | Return end{
-            $$ = new Compiler.ReturnNode();
-            $$.linenumber = Compiler.lineno;
-          }
-          | Continue end {
-            $$ = new Compiler.ContinueNode();
-            $$.linenumber = Compiler.lineno;
-          }
-          | Break end {
-            $$ = new Compiler.BreakNode(Compiler.lineno);
-          }
-          | Break IntNumber end {
-            $$ = new Compiler.BreakNode(new Compiler.IntNumberNode($2),Compiler.lineno);
-          }
+          | If OpenPar expr ClosePar block 
+                {
+                  $$ = new Compiler.IfNode($3,$5);
+                  $$.linenumber = Compiler.lineno;
+                }
+          | If OpenPar expr ClosePar block Else block 
+                {
+                  $$ = new Compiler.IfElseNode($3,$5,$7);
+                  $$.linenumber = Compiler.lineno;
+                }
+          | While OpenPar expr ClosePar block 
+                {
+                  $$ = new Compiler.WhileNode($3,$5, Compiler.lineno);
+                }
+          | Return end
+                {
+                  $$ = new Compiler.ReturnNode();
+                  $$.linenumber = Compiler.lineno;
+                }
+          | Continue end 
+                {
+                  $$ = new Compiler.ContinueNode();
+                  $$.linenumber = Compiler.lineno;
+                }
+          | Break end 
+                {
+                  $$ = new Compiler.BreakNode(Compiler.lineno);
+                }
+          | Break IntNumber end 
+                {
+                  $$ = new Compiler.BreakNode(new Compiler.IntNumberNode($2),Compiler.lineno);
+                }
+          | Create Ident OpenIndex expr indexes CloseIndex end 
+                {
+                    $5.Insert(0,$4);
+                    $$ = new Compiler.TabIdentNode($2,$5,true); 
+                    $$.linenumber = Compiler.lineno;
+                }
           | EndLine { $$ = new Compiler.EmptyNode(); $$.linenumber = Compiler.lineno;} 
-          | error EndLine {
-            Console.WriteLine("line {0,3} error: syntax error ",Compiler.lineno);  ++Compiler.errors; ;
-          }
-          | error Eof {
-            Console.WriteLine("line {0,3} error: unexpected Eof ",Compiler.lineno);  ++Compiler.errors; 
-            YYABORT; 
-          }
-          | Eof {
+          | error EndLine 
+                {
+                  Console.WriteLine("line {0,3} error: syntax error ",Compiler.lineno);  ++Compiler.errors; ;
+                }
+          | error Eof 
+                {
+                  Console.WriteLine("line {0,3} error: unexpected Eof ",Compiler.lineno);  ++Compiler.errors; 
+                  YYABORT; 
+                }
+          | Eof 
+                {
                     ++Compiler.errors;
                     Console.WriteLine("line {0,3} error: Syntax error",0);
                     YYABORT;
-                    }
+                }
           ;
 
 
@@ -199,6 +240,13 @@ expr      : Ident Assign expr {
                 Compiler.IdentNode node = new Compiler.IdentNode($1);
                 node.linenumber = Compiler.lineno;
                 $$ = new Compiler.AssignNode(node, $3);
+                $$.linenumber = Compiler.lineno;
+            }
+          | Ident OpenIndex expr indexes CloseIndex Assign expr {
+                $4.Insert(0,$3);
+                Compiler.TabIdentNode node = new Compiler.TabIdentNode($1,$4); 
+                node.linenumber = Compiler.lineno;
+                $$ = new Compiler.AssignNode(node, $7);
                 $$.linenumber = Compiler.lineno;
             }
           | expr1 {$$ = $1;}
@@ -341,7 +389,21 @@ val         : Ident {$$ = new Compiler.IdentNode($1);  $$.linenumber = Compiler.
             | IntNumber {$$ = new Compiler.IntNumberNode($1);  $$.linenumber = Compiler.lineno;}
             | RealNumber {$$ = new Compiler.DoubleNumberNode($1);  $$.linenumber = Compiler.lineno;}
             | Boolean {$$ = new Compiler.BooleanNode($1);  $$.linenumber = Compiler.lineno;}
+            | Ident OpenIndex expr indexes CloseIndex
+                {
+                    $4.Insert(0,$3);
+                    $$ = new Compiler.TabIdentNode($1,$4); 
+                    $$.linenumber = Compiler.lineno;
+                }
             | OpenPar expr ClosePar {$$ = $2;}
+            ;
+
+indexes     : Coma expr indexes 
+              {
+                $$ = $3;
+                $$.Insert(0,$2);
+              }
+            | {$$ = new List<Compiler.Node>();}
             ;
 
 end       : EndLine

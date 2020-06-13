@@ -23,6 +23,7 @@ Napis		\"(\\.|[^"\\])*\"
 "bool"		  { return (int)Tokens.Bool; }
 "break"		  { return (int)Tokens.Break; }
 "continue"    { return (int)Tokens.Continue; }
+"create"      { return (int)Tokens.Create; }
 {Boolean}     { yylval.val=yytext; return (int)Tokens.Boolean; }
 {IntNumber}   { yylval.val=yytext; return (int)Tokens.IntNumber; }
 {RealNumber}  { yylval.val=yytext; return (int)Tokens.RealNumber; }
@@ -50,6 +51,8 @@ Napis		\"(\\.|[^"\\])*\"
 ")"           { return (int)Tokens.ClosePar; }
 "{"           { return (int)Tokens.OpenBlock; }
 "}"           { return (int)Tokens.CloseBlock; }
+"["           { return (int)Tokens.OpenIndex; }
+"]"           { return (int)Tokens.CloseIndex; }
 ";"           { return (int)Tokens.EndLine; }
 <<EOF>>       { return (int)Tokens.Eof; }
 ","			  { return (int)Tokens.Coma; }
