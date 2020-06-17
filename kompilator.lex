@@ -7,7 +7,7 @@ RealNumber  ([1-9]([0-9])*\.([0-9])+)|(0\.([0-9])+)
 Boolean     (true|false)
 Ident       [a-zA-Z]([a-zA-Z0-9])*
 Comment		"//".*\n
-Napis		\"(\\.|[^"\\])*\"
+Napis		\"(\\.|[^"\\\n])*\"
 
 %%
 

@@ -32,25 +32,26 @@ public List<Compiler.Node> index;
 start     : Program OpenBlock body CloseBlock Eof
           | Program error Eof {
                     ++Compiler.errors;
-                    Console.WriteLine("line {0} error: Syntax error",0);
+                    Console.WriteLine("line {0} error: Syntax error ",0);
                     YYABORT;
                     }
           |OpenBlock body CloseBlock Eof {
                     ++Compiler.errors;
-                    Console.WriteLine("line {0} error: Syntax error",0);
+                    Console.WriteLine("line {0} error: Syntax error ",0);
                     YYABORT;
                     }
           | Eof {
                     ++Compiler.errors;
-                    Console.WriteLine("line {0} error: Syntax error",0);
+                    Console.WriteLine("line {0} error: Syntax error ",0);
                     YYABORT;
                     }
+
           ;
 
 body      : declarations code { Compiler.treeRoot = $2; ((Compiler.CodeNode)$2).idents = $1; ((Compiler.CodeNode)$2).codeId = "super"; }
           | declarations { Compiler.treeRoot = new Compiler.CodeNode(); ((Compiler.CodeNode)Compiler.treeRoot).idents = $1;}
           | code { Compiler.treeRoot = $1; ((Compiler.CodeNode)$1).codeId = "super"; }
-          | 
+          |  {Compiler.treeRoot = new Compiler.EmptyNode();}
           ;
 
 declarations : declaration declarations {
@@ -102,12 +103,6 @@ declaration  : dectype
                        $7.Add($6, Compiler.currentDecType);
                     $$ = $7;
                 }
-             | error Ident end 
-                { 
-                    Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);
-                    ++Compiler.errors;
-                    $$ = new Dictionary<string,Compiler.DecType>();
-                }
              | dectype error end 
                 {
                     Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);
@@ -139,6 +134,12 @@ longdeclaration     : Coma Ident longdeclaration
 dectype      : Int {$$ = Types.IntegerType;}
              | Double {$$ = Types.DoubleType;}
              | Bool {$$ =Types.BooleanType;}
+             | error Ident end 
+                { 
+                    Console.WriteLine("line {0,3} error: syntax error. ",Compiler.lineno);
+                    ++Compiler.errors;
+                    $$ = Types.NoneType;
+                }
              ;
 
 code      : block code { 
@@ -176,7 +177,21 @@ block     : OpenBlock code CloseBlock { $$ = new Compiler.BlockNode($2); $$.line
           ;
 
 line      : expr end { $$ = new Compiler.BareExpresionNode($1);$$.linenumber = Compiler.lineno; } 
-          | Read Ident end { $$ = new Compiler.ReadNode(new Compiler.IdentNode($2));$$.linenumber = Compiler.lineno; }
+          | Read Ident end 
+            { 
+                Compiler.IdentNode node = new Compiler.IdentNode($2); 
+                 node.linenumber = Compiler.lineno;
+                $$ = new Compiler.ReadNode(node);
+                $$.linenumber = Compiler.lineno;
+            }
+          | Read Ident OpenIndex expr indexes CloseIndex end 
+            {
+                $5.Insert(0,$4);
+                Compiler.TabIdentNode node = new Compiler.TabIdentNode($2,$5); 
+                node.linenumber = Compiler.lineno;
+                $$ = new Compiler.ReadNode(node);
+                $$.linenumber = Compiler.lineno; 
+            }
           | Write expr end { $$ = new Compiler.WriteNode($2);$$.linenumber = Compiler.lineno; }
           | Write String end { $$ = new Compiler.WriteNode(new Compiler.StringNode($2)); $$.linenumber = Compiler.lineno;}
           | If OpenPar expr ClosePar block 
@@ -217,20 +232,23 @@ line      : expr end { $$ = new Compiler.BareExpresionNode($1);$$.linenumber = C
                     $$ = new Compiler.TabIdentNode($2,$5,true); 
                     $$.linenumber = Compiler.lineno;
                 }
-          | EndLine { $$ = new Compiler.EmptyNode(); $$.linenumber = Compiler.lineno;} 
+          | EndLine {$$ = new Compiler.EmptyNode(); Console.WriteLine("line {0,3} error: syntax error ",Compiler.lineno);  ++Compiler.errors; ;} 
           | error EndLine 
                 {
+                    $$ = new Compiler.EmptyNode();
                   Console.WriteLine("line {0,3} error: syntax error ",Compiler.lineno);  ++Compiler.errors; ;
                 }
           | error Eof 
                 {
+                $$ = new Compiler.EmptyNode();
                   Console.WriteLine("line {0,3} error: unexpected Eof ",Compiler.lineno);  ++Compiler.errors; 
                   YYABORT; 
                 }
           | Eof 
                 {
+                $$ = new Compiler.EmptyNode();
                     ++Compiler.errors;
-                    Console.WriteLine("line {0,3} error: Syntax error",0);
+                    Console.WriteLine("line {0,3} error: unexpected Eof",0);
                     YYABORT;
                 }
           ;

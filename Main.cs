@@ -44,6 +44,11 @@ public class Compiler
         Console.WriteLine();
         sw = new StreamWriter(file + ".il");
         parser.Parse();
+        if(treeRoot is null)
+        {
+            errors++;
+            Console.WriteLine($"line 0 error: syntax error");
+        }
         if (errors == 0)
         {
             GenProlog();
@@ -66,6 +71,7 @@ public class Compiler
 
     public static Node treeRoot = null;
     public static DecType currentDecType;
+    public static int maxStack = 1;
 
     public struct DecType
     {
@@ -93,6 +99,8 @@ public class Compiler
         public virtual void SetRefForWhile(Node whileRef) { refForWhile = whileRef; }
         public virtual void SetRefParentCodeNode(Node parentCodeNode) { refParentCodeNode = parentCodeNode; }
         public virtual void GenIdents() { }
+
+        public virtual int GetStackDepth() { return 1; }
         public abstract string GenCode();
         public abstract Parser.Types CheckType();
     }
@@ -125,6 +133,10 @@ public class Compiler
                 refParentCodeNode = parentCodeNode;
                 expr.SetRefParentCodeNode(parentCodeNode);
             }
+        }
+        public override int GetStackDepth()
+        {
+            return expr.GetStackDepth();
         }
         public override string GenCode()
         {
@@ -204,6 +216,11 @@ public class Compiler
         public override string GenCode()
         {
             throw new NotImplementedException();
+        }
+
+        public override int GetStackDepth()
+        {
+            return right.GetStackDepth() + 1;
         }
 
         public override Parser.Types CheckType()
@@ -312,6 +329,12 @@ public class Compiler
                 right.SetRefParentCodeNode(parentCodeNode);
             }
         }
+        public override int GetStackDepth()
+        {
+            int r = right.GetStackDepth(), l = left.GetStackDepth();
+
+            return (r>l?r:l)+1;
+        }
         public override string GenCode()
         {
             if (this.CheckType() == Parser.Types.NoneType)
@@ -374,6 +397,12 @@ public class Compiler
                 left.SetRefParentCodeNode(parentCodeNode);
                 right.SetRefParentCodeNode(parentCodeNode);
             }
+        }
+        public override int GetStackDepth()
+        {
+            int r = right.GetStackDepth(), l = left.GetStackDepth();
+
+            return (r > l ? r : l) + 1;
         }
         public override string GenCode()
         {
@@ -556,6 +585,12 @@ public class Compiler
             left = _left;
             right = _right;
         }
+        public override int GetStackDepth()
+        {
+            int r = right.GetStackDepth(), l = left.GetStackDepth();
+
+            return (r > l ? r : l) + 1;
+        }
         public override string GenCode()
         {
             return null;
@@ -658,6 +693,12 @@ public class Compiler
             return null;
 
         }
+        public override int GetStackDepth()
+        {
+            int r = right.GetStackDepth(), l = left.GetStackDepth();
+
+            return (r > l ? r : l) + 1;
+        }
         public override void SetRefParentCodeNode(Node parentCodeNode)
         {
             if (refParentCodeNode is null)
@@ -749,6 +790,12 @@ public class Compiler
             return null;
 
         }
+        public override int GetStackDepth()
+        {
+            int r = right.GetStackDepth(), l = left.GetStackDepth();
+
+            return (r > l ? r : l) + 1;
+        }
         public override Parser.Types CheckType()
         {
             Parser.Types left_type = left.CheckType();
@@ -818,6 +865,12 @@ public class Compiler
                 block.SetRefParentCodeNode(parentCodeNode);
             }
         }
+        public override int GetStackDepth()
+        {
+            int r = block.GetStackDepth(), l = condition.GetStackDepth();
+
+            return (r > l ? r : l) + 1;
+        }
         public override string GenCode()
         {
             BlockNode bl1 = block as BlockNode;
@@ -865,6 +918,12 @@ public class Compiler
             blockAfterElse = _blockAfterElse;
         }
 
+        public override int GetStackDepth()
+        {
+            int r = condition.GetStackDepth(), l = blockAfterIf.GetStackDepth(), h = blockAfterElse.GetStackDepth();
+
+            return ((r > l ? r : l) > h? (r > l ? r : l):h )+ 1 ;
+        }
 
         public override Parser.Types CheckType()
         {
@@ -943,7 +1002,12 @@ public class Compiler
                 breakJump = $"{block.blockId}_break";
             }
         }
+        public override int GetStackDepth()
+        {
+            int r = condition.GetStackDepth(), l = block.GetStackDepth();
 
+            return (r > l ? r : l) + 1;
+        }
         public override void SetRefParentCodeNode(Node parentCodeNode)
         {
             if (refParentCodeNode is null)
@@ -996,7 +1060,10 @@ public class Compiler
         {
             writable_exp = _writable_exp;
         }
-
+        public override int GetStackDepth()
+        {
+            return writable_exp.GetStackDepth() + 4;
+        }
         public override Parser.Types CheckType()
         {
             return writable_exp.CheckType();
@@ -1056,7 +1123,10 @@ public class Compiler
         {
             return ident.CheckType();
         }
-
+        public override int GetStackDepth()
+        {
+            return ident.GetStackDepth() + 3;
+        }
         public override void SetRefParentCodeNode(Node parentCodeNode)
         {
             if (refParentCodeNode is null)
@@ -1123,7 +1193,6 @@ public class Compiler
         {
             identifier = _identifier;
         }
-
         public override Parser.Types CheckType()
         {
             DecType type = new DecType();
@@ -1173,7 +1242,16 @@ public class Compiler
             indexes = _indexes;
             create = _create;
         }
-
+        public override int GetStackDepth()
+        {
+            int max = 0;
+            foreach(var index in indexes)
+            {
+                int tmp = index.GetStackDepth();
+                if (tmp > max) max = tmp;
+            }
+            return max + indexes.Count + 2;
+        }
         public override Parser.Types CheckType()
         {
             DecType type = new DecType();
@@ -1217,7 +1295,22 @@ public class Compiler
                 return Parser.Types.NoneType;
             }
         }
-
+        public override void SetRefForWhile(Node whileRef)
+        {
+            base.SetRefForWhile(whileRef);
+            foreach(var ind in indexes)
+            {
+                ind.SetRefForWhile(whileRef);
+            }
+        }
+        public override void SetRefParentCodeNode(Node parentCodeNode)
+        {
+            refParentCodeNode = parentCodeNode;
+            foreach (var ind in indexes)
+            {
+                ind.SetRefParentCodeNode(parentCodeNode);
+            }
+        }
         public override string GenCode()
         {
             var type = this.CheckType();
@@ -1470,6 +1563,13 @@ public class Compiler
             ident = i;
         }
 
+        public override int GetStackDepth()
+        {
+            int r = ident.GetStackDepth(), l = expr.GetStackDepth();
+
+            return r + l + 3;
+        }
+
         public override Parser.Types CheckType()
         {
             return ident.CheckType();
@@ -1492,19 +1592,17 @@ public class Compiler
                 expr.GenCode();
                 if (id_type == Parser.Types.DoubleType && ex_type != id_type)
                     EmitCode("conv.r8");
+                EmitCode("dup");
                 switch(id_type)
                 {
                     case Parser.Types.BooleanType:
                         EmitCode("stloc 'tempb'");
-                        EmitCode("ldloc 'tempb'");
                         break;
                     case Parser.Types.DoubleType:
                         EmitCode("stloc 'tempf'");
-                        EmitCode("ldloc 'tempf'");
                         break;
                     case Parser.Types.IntegerType:
                         EmitCode("stloc 'tempi'");
-                        EmitCode("ldloc 'tempi'");
                         break;
                 }
                 ident.GenSetValue();
@@ -1583,7 +1681,10 @@ public class Compiler
         {
             return Parser.Types.NoneType;
         }
-
+        public override int GetStackDepth()
+        {
+            return inside.GetStackDepth();
+        }
         public override string GenCode()
         {
             EmitCode($"{blockId} : nop");
@@ -1629,7 +1730,16 @@ public class Compiler
             codeId = $"cn_{codeIdCounter++}";
             idents = new Dictionary<string, DecType>();
         }
-
+        public override int GetStackDepth()
+        {
+            int max = 0;
+            foreach (var index in inside)
+            {
+                int tmp = index.GetStackDepth();
+                if (tmp > max) max = tmp;
+            }
+            return max;
+        }
         public override Parser.Types CheckType()
         {
             return Parser.Types.NoneType;
@@ -1852,6 +1962,10 @@ public class Compiler
         EmitCode();
         EmitCode("// prolog");
         EmitCode();
+        if(!(treeRoot is null))
+        maxStack = treeRoot.GetStackDepth();
+        if(maxStack > 8)
+        EmitCode($".maxstack {maxStack}");
         EmitCode($".locals init ( float64 'tempf' )");
         EmitCode($".locals init ( int32 'tempi' )");
         EmitCode($".locals init ( bool 'tempb' )");
